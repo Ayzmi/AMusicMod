@@ -102,6 +102,12 @@ final class TrackAssets implements AutoCloseable {
     SyncedLyrics lyrics() { return lyrics; }
     boolean hasCover() { return hasCover; }
     void reload() { reloadVersion++; }
+    String lyricsStatus() {
+        if (!config.lyricsEnabled) return "Lyrics disabled";
+        if (requested.isEmpty()) return "";
+        if (!requested.equals(applied)) return "Loading lyrics...";
+        return lyrics.lines().isEmpty() ? "No timed lyrics found; add a matching .lrc" : "Synchronized lyrics ready";
+    }
 
     private void load(String key, PlayerState track, int options) {
         Assets assets = cache.get(key);
@@ -137,21 +143,25 @@ final class TrackAssets implements AutoCloseable {
             Path sidecar = LocalLibrary.metadata(music).sidecar(".lrc");
             if (Files.isRegularFile(sidecar) && sidecar.toRealPath().startsWith(musicDir.toRealPath())
                     && Files.size(sidecar) <= 512000) return SyncedLyrics.parse(Files.readString(sidecar));
-            return SyncedLyrics.EMPTY;
+            // Without a sidecar, use the same optional online lookup as external playback.
         }
         Files.createDirectories(lyricsDir);
         String name = (track.artist() + " - " + track.title()).replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_");
         if (name.length() > 160) name = name.substring(0, 160);
         Path local = lyricsDir.resolve(name + ".lrc");
         if (Files.isRegularFile(local) && Files.size(local) <= 512000) return SyncedLyrics.parse(Files.readString(local));
-        if (!config.onlineLyrics || track.artist().isBlank() || track.title().isBlank()
+        if (!config.onlineLyrics || track.title().isBlank()
                 || System.currentTimeMillis() < nextLyricsRequest) return SyncedLyrics.EMPTY;
-        String url = "https://lrclib.net/api/get?track_name=" + encode(track.title()) + "&artist_name=" + encode(track.artist());
-        if (!track.album().isBlank()) url += "&album_name=" + encode(track.album());
-        if (track.durationMs() >= 1000 && track.durationMs() <= 3600000) url += "&duration=" + track.durationMs() / 1000;
+        boolean search = track.artist().isBlank();
+        String url = "https://lrclib.net/api/" + (search ? "search" : "get") + "?track_name=" + encode(track.title());
+        if (!search) {
+            url += "&artist_name=" + encode(track.artist());
+            if (!track.album().isBlank()) url += "&album_name=" + encode(track.album());
+            if (track.durationMs() >= 1000 && track.durationMs() <= 3600000) url += "&duration=" + track.durationMs() / 1000;
+        }
         nextLyricsRequest = System.currentTimeMillis() + 1000;
         var request = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(6))
-                .header("User-Agent", "AMusicMod/1.3 (Minecraft Fabric; author Ayzmi)").GET().build();
+                .header("User-Agent", "AMusicMod/1.4 (https://github.com/Ayzmi/AMusicMod)").GET().build();
         var response = http.send(request, HttpResponse.BodyHandlers.ofInputStream());
         try (var body = response.body()) {
             if (response.statusCode() == 429 || response.statusCode() == 503) {
@@ -164,7 +174,9 @@ final class TrackAssets implements AutoCloseable {
             if (response.statusCode() != 200) return SyncedLyrics.EMPTY;
             byte[] bytes = body.readNBytes(512001);
             if (bytes.length > 512000) return SyncedLyrics.EMPTY;
-            var json = JsonParser.parseString(new String(bytes, StandardCharsets.UTF_8)).getAsJsonObject();
+            var parsed = JsonParser.parseString(new String(bytes, StandardCharsets.UTF_8));
+            var json = search ? LyricMatch.choose(parsed.getAsJsonArray(), track.title(), track.durationMs()) : parsed.getAsJsonObject();
+            if (json == null) return SyncedLyrics.EMPTY;
             var synced = json.get("syncedLyrics");
             return synced == null || synced.isJsonNull() ? SyncedLyrics.EMPTY : SyncedLyrics.parse(synced.getAsString());
         }
@@ -173,7 +185,12 @@ final class TrackAssets implements AutoCloseable {
     private int[] loadCover(String source) throws Exception {
         if (source == null || source.isEmpty()) return null;
         byte[] bytes;
-        if (source.startsWith("local:")) {
+        if (source.startsWith("embedded:")) {
+            Path music = Path.of(source.substring(9)).toRealPath();
+            if (!music.startsWith(musicDir.toRealPath())) return null;
+            bytes = LocalMetadata.read(music).cover();
+            if (bytes == null) return null;
+        } else if (source.startsWith("local:")) {
             Path image = Path.of(source.substring(6)).toRealPath();
             if (!image.startsWith(musicDir.toRealPath()) || Files.size(image) > 4_194_304) return null;
             bytes = Files.readAllBytes(image);

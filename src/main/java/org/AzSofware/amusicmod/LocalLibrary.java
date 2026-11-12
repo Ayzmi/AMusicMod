@@ -64,7 +64,7 @@ final class LocalLibrary {
 
     static Track metadata(Path path) {
         String name = path.getFileName().toString();
-        String stem = name.substring(0, name.lastIndexOf('.'));
+        String stem = name.substring(0, name.lastIndexOf('.')).replaceFirst("\\s*\\[[A-Za-z0-9_-]{11}]$", "").strip();
         int separator = stem.indexOf(" - ");
         return new Track(path.toAbsolutePath().normalize(), separator > 0 ? stem.substring(separator + 3) : stem,
                 separator > 0 ? stem.substring(0, separator) : "");

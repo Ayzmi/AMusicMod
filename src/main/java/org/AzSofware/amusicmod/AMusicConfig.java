@@ -24,6 +24,7 @@ public final class AMusicConfig {
     public boolean hudEnabled = true;
     public int hudX = 6;
     public int hudY = 6;
+    public float hudScale = .8f;
     /** How often to ask Spotify what is playing (seconds). Higher = lighter. */
     public int pollSeconds = 5;
     public boolean artworkEnabled = true;
@@ -72,6 +73,8 @@ public final class AMusicConfig {
         if (pollSeconds > 60) pollSeconds = 60;
         if (hudX < 0) hudX = 0;
         if (hudY < 0) hudY = 0;
+        if (!Float.isFinite(hudScale)) hudScale = .8f;
+        hudScale = Math.clamp(hudScale, .6f, 1.2f);
         lyricsOffsetMs = Math.clamp(lyricsOffsetMs, -10000, 10000);
         if (!Float.isFinite(lyricsDistance)) lyricsDistance = 12f;
         if (!Float.isFinite(lyricsScale)) lyricsScale = 1f;

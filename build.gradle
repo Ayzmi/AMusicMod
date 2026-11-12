@@ -56,7 +56,14 @@ tasks.register('verifyLocalAudio', JavaExec) {
     if (project.hasProperty('audioDeviceSmoke')) args '--device'
 }
 
-tasks.named('check') { dependsOn 'verifyTimeline', 'verifyLocalAudio' }
+tasks.register('verifyMetadata', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'org.AzSofware.amusicmod.MetadataChecks'
+    if (project.hasProperty('metadataProbe')) args project.property('metadataProbe')
+}
+
+tasks.named('check') { dependsOn 'verifyTimeline', 'verifyLocalAudio', 'verifyMetadata' }
 
 // Tests are dependency-free executable checks run by verifyTimeline.
 tasks.named('test') { failOnNoDiscoveredTests = false }

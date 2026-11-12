@@ -57,6 +57,7 @@ final class LocalMusicBackend implements MusicBackend {
         if (token != generation) return;
         boolean finished = false;
         try (var audio = LocalAudio.open(track.file())) {
+            var metadata = LocalMetadata.read(track.file());
             var format = audio.format();
             if (format.getChannels() < 1 || format.getChannels() > 2 || format.getSampleRate() > 192000)
                 throw new IllegalArgumentException("Use mono/stereo audio up to 192 kHz");
@@ -68,11 +69,18 @@ final class LocalMusicBackend implements MusicBackend {
                     Path cover = track.sidecar(extension);
                     if (Files.isRegularFile(cover)) { artwork = "local:" + cover; break; }
                 }
+                if (artwork.isEmpty() && metadata.cover() != null) artwork = "embedded:" + track.file();
+                if (artwork.isEmpty()) {
+                    for (String name : new String[]{"cover.jpg", "cover.png", "folder.jpg"}) {
+                        Path cover = track.file().resolveSibling(name);
+                        if (Files.isRegularFile(cover)) { artwork = "local:" + cover; break; }
+                    }
+                }
                 synchronized (this) {
                     if (token != generation) return;
                     output = line;
-                    state = new PlayerState(!paused, track.title(), track.artist(), 0, audio.durationMs(),
-                            System.currentTimeMillis(), "", artwork, track.file().toString());
+                    state = new PlayerState(!paused, metadata.title(), metadata.artist(), 0, audio.durationMs(),
+                            System.currentTimeMillis(), metadata.album(), artwork, track.file().toString());
                     status = "";
                     if (!paused) line.start();
                 }
@@ -95,8 +103,8 @@ final class LocalMusicBackend implements MusicBackend {
                     synchronized (this) {
                         if (token == generation && now - lastSnapshot > 200) {
                             long progress = (long)(line.getLongFramePosition() * 1000 / format.getFrameRate());
-                            state = new PlayerState(!paused, track.title(), track.artist(), progress, audio.durationMs(),
-                                    now, "", artwork, track.file().toString());
+                            state = new PlayerState(!paused, metadata.title(), metadata.artist(), progress, audio.durationMs(),
+                                    now, metadata.album(), artwork, track.file().toString());
                             lastSnapshot = now;
                         }
                     }

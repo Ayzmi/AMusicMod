@@ -114,6 +114,10 @@ final class MusicScreen extends Screen {
             config.localVolume = config.localVolume >= .99f ? 0 : Math.min(1, config.localVolume + .1f);
             config.save(); rebuildWidgets();
         });
+        button("HUD size: " + Math.round(config.hudScale * 100) + "%", x, 195, half - 4, () -> {
+            config.hudScale = config.hudScale >= 1.19f ? .6f : Math.min(1.2f, config.hudScale + .2f);
+            config.save(); rebuildWidgets();
+        });
     }
 
     private void optionWidgets() {
@@ -186,13 +190,15 @@ final class MusicScreen extends Screen {
             int pages = Math.max(1, (library.tracks().size() + rows - 1) / rows);
             g.centeredText(font, (page + 1) + " / " + pages, width / 2, height - 78, 0xFFAFBCC8);
             var state = music.state();
+            if (state != null) g.text(font, font.plainSubstrByWidth(assets.lyricsStatus(), panelWidth),
+                    x, height - 112, 0xFFAFBCC8, false);
             String status = state == null ? music.status() : state.title();
             g.text(font, font.plainSubstrByWidth(status, panelWidth), x, height - 99, 0xFFCCD5DD, false);
         } else if (tab == 1) {
             g.text(font, "Lyric color (HEX)", x, 77, 0xFFCCD5DD, false);
             g.text(font, "HUD accent (HEX)", x + panelWidth / 2, 77, 0xFFCCD5DD, false);
             g.text(font, "Timing offset (ms)", x, 150, 0xFFCCD5DD, false);
-            g.centeredText(font, "Your lyrics will look like this", width / 2, 197, 0xFF000000 | config.lyricsColor);
+            g.text(font, "Lyric preview", x + panelWidth / 2, 200, 0xFF000000 | config.lyricsColor, true);
         }
         super.extractRenderState(g, mouseX, mouseY, partialTick);
     }

@@ -69,7 +69,8 @@ final class LocalAudio {
                 header = input.readFrame();
                 if (header == null) throw new IOException("Empty MP3 file");
                 format = new AudioFormat(header.frequency(), 16, header.mode() == Header.SINGLE_CHANNEL ? 1 : 2, true, false);
-                duration = (long)header.total_ms((int)Math.min(Integer.MAX_VALUE, Files.size(file)));
+                long audioBytes = Math.max(0, Files.size(file) - input.header_pos());
+                duration = (long)header.total_ms((int)Math.min(Integer.MAX_VALUE, audioBytes));
             } catch (Exception e) { input.close(); throw e; }
         }
         public AudioFormat format() { return format; }
