@@ -1,0 +1,9 @@
+JLayer 1.0.1 (unmodified)
+Copyright (c) 1999-2008 JavaZOOM
+License: GNU Lesser General Public License 2.1; see JLayer-LGPL-2.1.txt.
+Distributed as a separate nested JAR under META-INF/jars.
+Source: https://repo.maven.apache.org/maven2/javazoom/jlayer/1.0.1/jlayer-1.0.1-sources.jar
+Project: https://github.com/umjammer/jlayer
+
+Mod icon: user-provided artwork bearing the KusArt watermark.
+The MIT license for AMusicMod code does not grant rights to third-party artwork.

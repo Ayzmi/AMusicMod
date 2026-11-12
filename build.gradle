@@ -1,0 +1,81 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+repositories {
+    maven { url = 'https://maven.fabricmc.net/' }
+    mavenCentral()
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+
+    // Minecraft 26.x tidak di-obfuscate: pakai implementation, bukan modImplementation
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    include(implementation('javazoom:jlayer:1.0.1'))
+}
+
+processResources {
+    inputs.property "version", project.version
+    filteringCharset "UTF-8"
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 25
+    options.encoding = 'UTF-8'
+}
+
+java {
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
+tasks.register('verifyTimeline', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'org.AzSofware.amusicmod.TimelineChecks'
+}
+
+tasks.register('verifyLocalAudio', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'org.AzSofware.amusicmod.LocalAudioChecks'
+    if (project.hasProperty('audioDeviceSmoke')) args '--device'
+}
+
+tasks.named('check') { dependsOn 'verifyTimeline', 'verifyLocalAudio' }
+
+// Tests are dependency-free executable checks run by verifyTimeline.
+tasks.named('test') { failOnNoDiscoveredTests = false }
+
+// Keep previous artifacts until a successful build has produced their replacement.
+tasks.register('pruneOldArtifacts') {
+    dependsOn tasks.named('jar'), tasks.named('sourcesJar'), tasks.named('check')
+    doLast {
+        def output = layout.buildDirectory.dir('libs').get().asFile
+        def current = [tasks.jar.archiveFile.get().asFile.name, tasks.sourcesJar.archiveFile.get().asFile.name]
+        fileTree(output) { include "${base.archivesName.get()}-*.jar" }.files.each {
+            if (!current.contains(it.name)) delete(it)
+        }
+    }
+}
+tasks.named('build') { dependsOn 'pruneOldArtifacts' }
+
+jar {
+    from("LICENSE") {
+        rename { "${it}_${project.base.archivesName.get()}" }
+    }
+}

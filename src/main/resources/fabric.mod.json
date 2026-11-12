@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "amusicmod",
+  "version": "${version}",
+  "name": "AMusicMod",
+  "description": "Music HUD, floating 3D lyrics, media controls and a local MP3/WAV/OGG player.",
+  "icon": "assets/amusicmod/icon.png",
+  "authors": ["Ayzmi"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["org.AzSofware.amusicmod.AMusicMod"]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.1",
+    "minecraft": ">=26.2-",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
