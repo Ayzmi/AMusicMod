@@ -1,0 +1,62 @@
+plugins {
+    id 'net.fabricmc.fabric-loom-remap' version '1.15.2'
+}
+
+def shared = file('../..')
+def modProperties = new Properties()
+file("$shared/gradle.properties").withInputStream { modProperties.load(it) }
+version = modProperties.mod_version
+group = modProperties.maven_group
+base { archivesName = "${modProperties.archives_base_name}-mc1.21.11" }
+
+repositories { mavenCentral() }
+dependencies {
+    minecraft 'com.mojang:minecraft:1.21.11'
+    mappings loom.officialMojangMappings()
+    modImplementation 'net.fabricmc:fabric-loader:0.19.2'
+    modImplementation 'net.fabricmc.fabric-api:fabric-api:0.141.6+1.21.11'
+    include(implementation('javazoom:jlayer:1.0.1'))
+}
+
+// Only the game-facing adapters differ. Music, metadata and playback remain shared.
+def adapters = ['AMusicMod.java', 'MusicHud.java', 'MusicScreen.java', 'LyricsRenderer.java', 'McBridge.java']
+sourceSets {
+    main {
+        java {
+            srcDir "$shared/src/main/java"
+            exclude { entry -> entry.file.toPath().startsWith(file("$shared/src/main/java").toPath()) && adapters.contains(entry.file.name) }
+        }
+        resources.srcDir "$shared/src/main/resources"
+    }
+    test.java.srcDir "$shared/src/test/java"
+}
+
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('fabric.mod.json') {
+        expand version: project.version
+        filter { line -> line.replace('>=26.2-', '~1.21.11').replace('>=25', '>=21') }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 21
+    options.encoding = 'UTF-8'
+}
+java {
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+['Timeline', 'LocalAudio', 'Metadata'].each { name ->
+    tasks.register("verify${name}", JavaExec) {
+        dependsOn testClasses
+        classpath = sourceSets.test.runtimeClasspath
+        mainClass = "org.AzSofware.amusicmod.${name}Checks"
+    }
+    tasks.named('check') { dependsOn "verify${name}" }
+}
+tasks.named('test') { failOnNoDiscoveredTests = false }
+jar {
+    from("$shared/LICENSE") { rename { "LICENSE_${modProperties.archives_base_name}" } }
+}

@@ -1,6 +1,6 @@
 # AMusicMod
 
-Client-side music HUD and floating 3D lyrics for **Minecraft 26.2 / Fabric / Java 25+**.
+Client-side music HUD and floating 3D lyrics for **Minecraft 26.2 / Fabric / Java 25+** and **Minecraft 1.21.11 / Fabric / Java 21+**.
 
 ![AMusicMod gameplay preview: floating lyrics at sunset](docs/images/gameplay.png)
 
@@ -37,6 +37,18 @@ Press **F7 → Appearance** for colors, lyric size/distance/timing, HUD scale an
 ```
 
 Use `build/libs/amusicmod-1.4.0.jar`. Successful builds remove older AMusicMod JARs from `build/libs`; failed builds keep them. Replace the old JAR in your Minecraft `mods` folder manually.
+
+### Minecraft 1.21.11
+
+Build the 1.21.11 edition from the same repository:
+
+```powershell
+.\gradlew.bat -p versions/1.21.11 build
+```
+
+Use `versions/1.21.11/build/libs/amusicmod-mc1.21.11-1.4.0.jar` with Fabric Loader **0.19.2+**, Fabric API for **1.21.11**, and Java **21+**. Install only the JAR matching your Minecraft version; the two editions use the same mod ID and configuration. The Gradle wrapper itself requires JDK 21 or newer; the 26.2 build requires JDK 25 or newer.
+
+The 1.21.11 build shares music playback, metadata, configuration, artwork and tests with the main project. Its game-specific adapters live in `versions/1.21.11/src/main/java`; keep their HUD, menu and lyric behavior aligned when updating the main adapters. This build remaps Mojang names to Fabric intermediary names for production.
 
 ## Credits
 
